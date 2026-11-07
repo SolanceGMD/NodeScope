@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.20)
+project(NodeScopeHook LANGUAGES CXX)
+add_library(NodeScopeHook SHARED src/hook.cpp)
+target_compile_features(NodeScopeHook PRIVATE cxx_std_17)
+target_compile_definitions(NodeScopeHook PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
+target_link_libraries(NodeScopeHook PRIVATE user32 gdi32)
+set_target_properties(NodeScopeHook PROPERTIES OUTPUT_NAME "NodeScopeHook")

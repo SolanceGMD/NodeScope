@@ -1,9 +1,9 @@
-name: Build Windows EXE
+name: Build NodeScope Windows x64
 on:
   workflow_dispatch:
   push:
     branches: [ main ]
-    paths: [ 'src/**', 'addons/**', 'NodeScope.sln', '.github/workflows/build-windows.yml' ]
+    paths: [ 'src/**', 'native/**', 'README.md', '.github/workflows/build-windows.yml' ]
 jobs:
   build:
     runs-on: windows-latest
@@ -12,9 +12,17 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-      - name: Publish self-contained EXE
+      - name: Build native x64 hook
+        shell: pwsh
+        run: |
+          cmake -S .\native\NodeScopeHook -B .\native\NodeScopeHook\build -A x64
+          cmake --build .\native\NodeScopeHook\build --config Release
+          New-Item -ItemType Directory -Force .\artifacts\win-x64 | Out-Null
+          Copy-Item .\native\NodeScopeHook\build\Release\NodeScopeHook.dll .\artifacts\win-x64\NodeScopeHook.dll
+      - name: Publish launcher
+        shell: pwsh
         run: dotnet publish .\src\NodeScope\NodeScope.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o .\artifacts\win-x64
       - uses: actions/upload-artifact@v4
         with:
-          name: NodeScope-win-x64
-          path: .\artifacts\win-x64\NodeScope.exe
+          name: NodeScope-experimental-win-x64
+          path: .\artifacts\win-x64\*
