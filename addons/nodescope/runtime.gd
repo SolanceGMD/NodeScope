@@ -18,6 +18,7 @@ func _ready() -> void:
         push_error("NodeScope could not listen on 127.0.0.1:%d (error %d)" % [PORT, err])
     print("NodeScope bridge listening on 127.0.0.1:%d" % PORT)
     _record_log("Bridge listening on 127.0.0.1:%d" % PORT)
+    _ensure_editor_ui.call_deferred()
 
 func _process(delta: float) -> void:
     if peer == null and server.is_connection_available():
@@ -102,8 +103,8 @@ func _set_property(instance_id: int, property: String, raw_value: Variant) -> Di
     if not allowed.has(property): return {"error": "Property is not editable"}
     if property == "name":
         node.name = str(raw_value)
-    elif property == "visible" and node is Node3D:
-        node.visible = bool(raw_value)
+    elif property == "visible" and node is CanvasItem:
+        node.visible = raw_value == true or str(raw_value).to_lower() == "true"
     elif property in ["position", "rotation", "scale"] and node is Node3D:
         var v = _parse_vector(raw_value)
         if v == null: return {"error": "Expected a vector as [x,y,z]"}
