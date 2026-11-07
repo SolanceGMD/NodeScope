@@ -9,6 +9,7 @@ var previous_camera: Camera3D
 var camera_speed := 8.0
 var camera_enabled := false
 var selected_id := 0
+var runtime_logs: Array[String] = []
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
@@ -16,6 +17,7 @@ func _ready() -> void:
     if err != OK:
         push_error("NodeScope could not listen on 127.0.0.1:%d (error %d)" % [PORT, err])
     print("NodeScope bridge listening on 127.0.0.1:%d" % PORT)
+    _record_log("Bridge listening on 127.0.0.1:%d" % PORT)
 
 func _process(delta: float) -> void:
     if peer == null and server.is_connection_available():
@@ -57,9 +59,13 @@ func _handle_line(line: String) -> void:
         "duplicate": result = _duplicate_node(int(args.get("id", 0)))
         "rename": result = _rename_node(int(args.get("id", 0)), str(args.get("name", "")))
         "camera": result = _camera_command(args)
-        "logs": result = {"message": "Use the Godot Output panel for engine logs; runtime log streaming is not yet available."}
+        "logs": result = {"entries": runtime_logs.duplicate(), "scope": "NodeScope bridge events only; engine output remains in Godot."}
         _: result = {"error": "Unknown action: " + action}
     _send({"id": id, "ok": not (typeof(result) == TYPE_DICTIONARY and result.has("error")), "result": result})
+
+func _record_log(message: String) -> void:
+    runtime_logs.append("[%s] %s" % [Time.get_time_string_from_system(), message])
+    if runtime_logs.size() > 200: runtime_logs.pop_front()
 
 func _send(data: Dictionary) -> void:
     if peer != null and peer.get_status() == StreamPeerTCP.STATUS_CONNECTED:
@@ -143,6 +149,7 @@ func _create_node(parent_id: int, kind: String) -> Dictionary:
     node.name = "NodeScope" + kind.capitalize()
     parent.add_child(node)
     node.owner = get_tree().edited_scene_root if Engine.is_editor_hint() else get_tree().current_scene
+    _record_log("Created %s" % node.name)
     return {"id": node.get_instance_id(), "name": node.name, "type": node.get_class()}
 
 func _delete_node(instance_id: int) -> Dictionary:
@@ -150,6 +157,7 @@ func _delete_node(instance_id: int) -> Dictionary:
     if node == null or node == get_tree().root or node == get_tree().current_scene:
         return {"error": "Cannot delete this node"}
     node.queue_free()
+    _record_log("Deleted %s" % node.name)
     return {"deleted": instance_id}
 
 func _duplicate_node(instance_id: int) -> Dictionary:
@@ -159,12 +167,14 @@ func _duplicate_node(instance_id: int) -> Dictionary:
     node.get_parent().add_child(copy)
     copy.owner = node.owner
     copy.name = node.name + "Copy"
+    _record_log("Duplicated %s" % node.name)
     return {"id": copy.get_instance_id(), "name": copy.name}
 
 func _rename_node(instance_id: int, new_name: String) -> Dictionary:
     var node := _find_node(instance_id)
     if node == null or new_name.strip_edges().is_empty(): return {"error": "Invalid node or name"}
     node.name = new_name
+    _record_log("Renamed node to %s" % node.name)
     return {"name": node.name}
 
 func _camera_command(args: Dictionary) -> Dictionary:
