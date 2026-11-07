@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [ main ]
-    paths: [ 'src/**', 'native/**', 'README.md', '.github/workflows/build-windows.yml' ]
+    paths: [ 'src/**', 'native/**', 'addons/**', 'README.md', '.github/workflows/build-windows.yml' ]
 jobs:
   build:
     runs-on: windows-latest
