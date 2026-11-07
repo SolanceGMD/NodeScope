@@ -5,6 +5,7 @@ var server := TCPServer.new()
 var peer: StreamPeerTCP
 var input_buffer := ""
 var free_camera: Camera3D
+var previous_camera: Camera3D
 var camera_speed := 8.0
 var camera_enabled := false
 var selected_id := 0
@@ -81,8 +82,12 @@ func _inspect(instance_id: int) -> Dictionary:
         var pname := str(item.name)
         if pname in ["name", "position", "rotation", "scale", "visible", "size", "radius", "height"]:
             var value = node.get(pname)
-            props.append({"name": pname, "value": var_to_str(value), "type": int(item.type)})
+            props.append({"name": pname, "value": _format_value(value), "type": int(item.type)})
     return {"id": instance_id, "name": node.name, "type": node.get_class(), "properties": props}
+
+func _format_value(value: Variant) -> String:
+    if value is Vector3: return "[%s, %s, %s]" % [value.x, value.y, value.z]
+    return str(value)
 
 func _set_property(instance_id: int, property: String, raw_value: Variant) -> Dictionary:
     var node := _find_node(instance_id)
@@ -115,7 +120,8 @@ func _parse_vector(value: Variant):
     if typeof(value) == TYPE_ARRAY and value.size() == 3:
         return Vector3(float(value[0]), float(value[1]), float(value[2]))
     if typeof(value) == TYPE_STRING:
-        var parts = str(value).replace("(", "").replace(")", "").split(",")
+        var cleaned := str(value).replace("Vector3", "").replace("[", "").replace("]", "").replace("(", "").replace(")", "")
+        var parts = cleaned.split(",")
         if parts.size() == 3: return Vector3(float(parts[0]), float(parts[1]), float(parts[2]))
     return null
 
@@ -169,17 +175,17 @@ func _camera_command(args: Dictionary) -> Dictionary:
     if command == "toggle":
         camera_enabled = not camera_enabled
         if camera_enabled:
-            var viewport_camera := get_viewport().get_camera_3d()
+            previous_camera = get_viewport().get_camera_3d()
             free_camera = Camera3D.new()
             free_camera.name = "NodeScopeFreeCamera"
             get_tree().current_scene.add_child(free_camera)
-            if viewport_camera: free_camera.global_transform = viewport_camera.global_transform
+            if previous_camera: free_camera.global_transform = previous_camera.global_transform
             free_camera.current = true
         elif is_instance_valid(free_camera):
             free_camera.queue_free()
             free_camera = null
-            var cameras := get_tree().get_nodes_in_group("nodescope_restore_camera")
-            if not cameras.is_empty(): cameras[0].current = true
+            if is_instance_valid(previous_camera): previous_camera.current = true
+            previous_camera = null
         return {"enabled": camera_enabled}
     return {"error": "Unknown camera command"}
 
