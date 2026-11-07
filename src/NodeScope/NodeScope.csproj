@@ -5,4 +5,7 @@
     <AssemblyName>NodeScope</AssemblyName><RootNamespace>NodeScope</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
+  <ItemGroup>
+    <Content Include="..\\..\\addons\\nodescope\\**\\*" Link="addons\\nodescope\\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
