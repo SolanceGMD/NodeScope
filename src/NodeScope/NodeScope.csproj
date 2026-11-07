@@ -1,1 +1,16 @@
-<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net8.0-windows</TargetFramework><UseWindowsForms>true</UseWindowsForms><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><AssemblyName>NodeScope</AssemblyName><RootNamespace>NodeScope</RootNamespace><ApplicationManifest>app.manifest</ApplicationManifest></PropertyGroup></Project>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>NodeScope</AssemblyName>
+    <RootNamespace>NodeScope</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="App.xaml.cs;MainWindow.xaml.cs;RenameDialog.cs" />
+    <None Remove="App.xaml;MainWindow.xaml" />
+  </ItemGroup>
+</Project>
