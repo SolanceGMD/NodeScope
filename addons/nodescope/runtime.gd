@@ -209,3 +209,187 @@ func _move_camera(delta: float) -> void:
     if Input.is_key_pressed(KEY_E): direction += Vector3.UP
     if Input.is_key_pressed(KEY_Q): direction -= Vector3.UP
     free_camera.global_position += direction.normalized() * camera_speed * delta
+
+
+# In-game inspector UI. The editor is session-only and runs in the game's own SceneTree.
+var _ui_layer: CanvasLayer
+var _panel: PanelContainer
+var _tree_view: Tree
+var _property_list: VBoxContainer
+var _selected_runtime_node: int = 0
+var _ui_visible := false
+
+func _input(event: InputEvent) -> void:
+    if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_EQUAL:
+        _ui_visible = not _ui_visible
+        if is_instance_valid(_panel):
+            _panel.visible = _ui_visible
+        get_viewport().set_input_as_handled()
+
+func _ensure_editor_ui() -> void:
+    if is_instance_valid(_ui_layer):
+        return
+    _ui_layer = CanvasLayer.new()
+    _ui_layer.layer = 100
+    get_tree().root.add_child.call_deferred(_ui_layer)
+    var root := Control.new()
+    root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    _ui_layer.add_child(root)
+    _panel = PanelContainer.new()
+    _panel.position = Vector2(24, 24)
+    _panel.size = Vector2(920, 620)
+    _panel.custom_minimum_size = Vector2(920, 620)
+    _panel.visible = false
+    root.add_child(_panel)
+    var outer := VBoxContainer.new()
+    _panel.add_child(outer)
+    var header := HBoxContainer.new()
+    outer.add_child(header)
+    var heading := Label.new()
+    heading.text = "NodeScope  |  Wobble Works Runtime Inspector"
+    heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    header.add_child(heading)
+    var close := Button.new()
+    close.text = "Close  [=]"
+    close.pressed.connect(func(): _ui_visible = false; _panel.visible = false)
+    header.add_child(close)
+    var split := HSplitContainer.new()
+    split.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    outer.add_child(split)
+    _tree_view = Tree.new()
+    _tree_view.custom_minimum_size.x = 330
+    _tree_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    _tree_view.item_selected.connect(_on_ui_tree_selected)
+    split.add_child(_tree_view)
+    var right := VBoxContainer.new()
+    right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    split.add_child(right)
+    var actions := HFlowContainer.new()
+    right.add_child(actions)
+    _add_action_button(actions, "Add Box", func(): _ui_create("box"))
+    _add_action_button(actions, "Add Sphere", func(): _ui_create("sphere"))
+    _add_action_button(actions, "Add Cylinder", func(): _ui_create("cylinder"))
+    _add_action_button(actions, "Duplicate", func(): _ui_duplicate())
+    _add_action_button(actions, "Rename", func(): _ui_rename())
+    _add_action_button(actions, "Delete", func(): _ui_delete())
+    var scroll := ScrollContainer.new()
+    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    right.add_child(scroll)
+    _property_list = VBoxContainer.new()
+    _property_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    scroll.add_child(_property_list)
+    var footer := Label.new()
+    footer.text = "Runtime-only edits • Not written to the game's project files"
+    outer.add_child(footer)
+    _refresh_ui_tree()
+
+func _add_action_button(parent: Control, caption: String, action: Callable) -> void:
+    var button := Button.new()
+    button.text = caption
+    button.pressed.connect(action)
+    parent.add_child(button)
+
+func _refresh_ui_tree() -> void:
+    if not is_instance_valid(_tree_view):
+        return
+    _tree_view.clear()
+    var root_item := _tree_view.create_item()
+    root_item.set_text(0, "SceneTree")
+    root_item.set_metadata(0, 0)
+    _append_ui_tree(root_item, get_tree().root)
+    root_item.collapsed = false
+
+func _append_ui_tree(parent_item: TreeItem, node: Node) -> void:
+    for child in node.get_children():
+        var item := _tree_view.create_item(parent_item)
+        item.set_text(0, "%s  <%s>" % [child.name, child.get_class()])
+        item.set_metadata(0, child.get_instance_id())
+        _append_ui_tree(item, child)
+
+func _on_ui_tree_selected() -> void:
+    var item := _tree_view.get_selected()
+    if item == null:
+        return
+    _selected_runtime_node = int(item.get_metadata(0))
+    _populate_ui_properties()
+
+func _populate_ui_properties() -> void:
+    for child in _property_list.get_children():
+        child.queue_free()
+    var node := _find_node(_selected_runtime_node)
+    if node == null:
+        return
+    var title := Label.new()
+    title.text = "%s  (%s)" % [node.name, node.get_class()]
+    _property_list.add_child(title)
+    var editable := ["name", "position", "rotation", "scale", "visible", "size", "radius", "height"]
+    for property_name in editable:
+        if not _node_has_property(node, property_name):
+            continue
+        var row := HBoxContainer.new()
+        _property_list.add_child(row)
+        var label := Label.new()
+        label.text = property_name
+        label.custom_minimum_size.x = 110
+        row.add_child(label)
+        var field := LineEdit.new()
+        field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        field.text = str(node.get(property_name))
+        row.add_child(field)
+        var apply := Button.new()
+        apply.text = "Apply"
+        apply.pressed.connect(func(): _apply_ui_property(property_name, field.text))
+        row.add_child(apply)
+
+func _node_has_property(node: Object, property_name: String) -> bool:
+    for descriptor in node.get_property_list():
+        if str(descriptor.name) == property_name:
+            return true
+    return false
+
+func _apply_ui_property(property_name: String, raw: String) -> void:
+    var node := _find_node(_selected_runtime_node)
+    if node == null:
+        return
+    var result := _set_property(_selected_runtime_node, property_name, raw)
+    if result.has("error"):
+        _record_log("Property edit failed: " + str(result.error))
+    else:
+        _record_log("Updated %s.%s" % [node.name, property_name])
+    _populate_ui_properties()
+
+func _ui_create(kind: String) -> void:
+    var result := _create_node(_selected_runtime_node, kind)
+    if result.has("error"):
+        _record_log(str(result.error))
+    _refresh_ui_tree()
+
+func _ui_duplicate() -> void:
+    if _selected_runtime_node != 0:
+        _duplicate_node(_selected_runtime_node)
+        _refresh_ui_tree()
+
+func _ui_delete() -> void:
+    if _selected_runtime_node != 0:
+        _delete_node(_selected_runtime_node)
+        _selected_runtime_node = 0
+        _refresh_ui_tree()
+        _populate_ui_properties()
+
+func _ui_rename() -> void:
+    var node := _find_node(_selected_runtime_node)
+    if node == null:
+        return
+    var dialog := AcceptDialog.new()
+    dialog.title = "Rename node"
+    var field := LineEdit.new()
+    field.text = node.name
+    dialog.add_child(field)
+    get_tree().root.add_child(dialog)
+    dialog.confirmed.connect(func():
+        _rename_node(_selected_runtime_node, field.text)
+        dialog.queue_free()
+        _refresh_ui_tree()
+    )
+    dialog.canceled.connect(func(): dialog.queue_free())
+    dialog.popup_centered(Vector2i(360, 120))
