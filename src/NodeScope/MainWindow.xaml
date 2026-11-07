@@ -1,0 +1,46 @@
+<Window x:Class="NodeScope.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="NodeScope" Height="780" Width="1180" MinHeight="600" MinWidth="900" Background="#FF171C24" Foreground="#FFE8EDF2" WindowStartupLocation="CenterScreen">
+ <Window.Resources>
+  <Style TargetType="Button"><Setter Property="Background" Value="#FF303B49"/><Setter Property="Foreground" Value="#FFE8EDF2"/><Setter Property="BorderBrush" Value="#FF465364"/><Setter Property="Padding" Value="10,6"/><Setter Property="Margin" Value="3"/></Style>
+  <Style TargetType="TextBox"><Setter Property="Background" Value="#FF12171E"/><Setter Property="Foreground" Value="#FFE8EDF2"/><Setter Property="BorderBrush" Value="#FF465364"/><Setter Property="Padding" Value="6"/></Style>
+  <Style TargetType="TreeView"><Setter Property="Background" Value="#FF202631"/><Setter Property="Foreground" Value="#FFE8EDF2"/><Setter Property="BorderThickness" Value="0"/></Style>
+  <Style TargetType="ListBox"><Setter Property="Background" Value="#FF202631"/><Setter Property="Foreground" Value="#FFE8EDF2"/><Setter Property="BorderThickness" Value="0"/></Style>
+ </Window.Resources>
+ <DockPanel>
+  <Border DockPanel.Dock="Top" Background="#FF202631" Padding="10">
+   <DockPanel>
+    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+     <Button Content="Open project…" Click="OpenProject_Click"/><Button Content="Godot executable…" Click="GodotExe_Click"/><Button Content="Install addon" Click="Install_Click"/><Button Content="Launch game" Click="Launch_Click"/><Button Content="Attach" Click="Attach_Click"/>
+    </StackPanel>
+    <StackPanel><TextBlock Text="NodeScope" FontSize="21" FontWeight="Bold"/><TextBlock x:Name="StatusText" Text="Disconnected · Godot 4.x · 127.0.0.1:47831" Foreground="#FF9BA8B8"/></StackPanel>
+   </DockPanel>
+  </Border>
+  <Border DockPanel.Dock="Bottom" Background="#FF202631" Padding="7"><TextBlock x:Name="FooterText" Text="Ready. Install the runtime addon into a Godot 4 project, then launch or attach."/></Border>
+  <Grid Margin="8">
+   <Grid.ColumnDefinitions><ColumnDefinition Width="300"/><ColumnDefinition Width="5"/><ColumnDefinition Width="*"/><ColumnDefinition Width="5"/><ColumnDefinition Width="270"/></Grid.ColumnDefinitions>
+   <DockPanel Grid.Column="0">
+    <StackPanel DockPanel.Dock="Top"><TextBlock Text="SCENE EXPLORER" FontWeight="Bold" Margin="5"/><TextBox x:Name="SearchBox" Margin="3" ToolTip="Filter nodes" TextChanged="SearchBox_Changed"/><WrapPanel><Button Content="↻ Refresh" Click="Refresh_Click"/><Button Content="+ Box" Click="AddBox_Click"/><Button Content="+ Sphere" Click="AddSphere_Click"/><Button Content="+ Cylinder" Click="AddCylinder_Click"/></WrapPanel></StackPanel>
+    <TreeView x:Name="SceneTree" SelectedItemChanged="SceneTree_Selected"/>
+   </DockPanel>
+   <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch"/>
+   <DockPanel Grid.Column="2" Margin="8,0">
+    <StackPanel DockPanel.Dock="Top"><TextBlock Text="INSPECTOR" FontWeight="Bold" Margin="5"/><TextBlock x:Name="SelectedTitle" Text="Select a node" Foreground="#FF9BA8B8" Margin="5"/><WrapPanel><Button Content="Duplicate" Click="Duplicate_Click"/><Button Content="Delete" Click="Delete_Click"/><Button Content="Rename" Click="Rename_Click"/></WrapPanel></StackPanel>
+    <DataGrid x:Name="PropertiesGrid" AutoGenerateColumns="False" CanUserAddRows="False" Background="#FF202631" Foreground="#FFE8EDF2" HeadersVisibility="Column" GridLinesVisibility="Horizontal">
+     <DataGrid.Columns><DataGridTextColumn Header="Property" Binding="{Binding Name}" IsReadOnly="True" Width="150"/><DataGridTextColumn Header="Value (edit then Enter)" Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Width="*"/></DataGrid.Columns>
+    </DataGrid>
+    <Button DockPanel.Dock="Bottom" Content="Apply selected property" Click="ApplyProperty_Click" HorizontalAlignment="Right"/>
+   </DockPanel>
+   <GridSplitter Grid.Column="3" Width="5" HorizontalAlignment="Stretch"/>
+   <DockPanel Grid.Column="4" Margin="8,0">
+    <TextBlock DockPanel.Dock="Top" Text="DEBUG TOOLS" FontWeight="Bold" Margin="5"/>
+    <StackPanel>
+     <Button Content="Toggle free camera (WASD / Q,E)" Click="Camera_Click"/>
+     <TextBlock Text="Camera speed" Margin="4,8,4,2"/><TextBox x:Name="CameraSpeed" Text="8" Margin="3"/><Button Content="Set camera speed" Click="CameraSpeed_Click"/>
+     <Separator Margin="3,12"/>
+     <TextBlock Text="RUNTIME LOG" FontWeight="Bold" Margin="5"/>
+     <ListBox x:Name="LogList" Height="260"/>
+     <Button Content="Clear log" Click="ClearLog_Click"/>
+    </StackPanel>
+   </DockPanel>
+  </Grid>
+ </DockPanel>
+</Window>
