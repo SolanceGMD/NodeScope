@@ -17,6 +17,7 @@ public partial class MainWindow : Window
     private string? _projectFile;
     private string? _godotExe;
     private int _selectedId;
+    private int _seenRuntimeLogs;
     private string _selectedName = "";
     private readonly DispatcherTimer _poll = new() { Interval = TimeSpan.FromSeconds(2) };
 
@@ -112,6 +113,13 @@ public partial class MainWindow : Window
             SceneTree.Items.Clear();
             if (result.TryGetProperty("nodes", out var nodes))
                 foreach (var node in nodes.EnumerateArray()) AddTreeItem(null, node);
+            var logs = await _bridge.SendAsync("logs", new { });
+            if (logs.TryGetProperty("entries", out var entries))
+            {
+                var all = entries.EnumerateArray().Select(x => x.GetString() ?? "").ToArray();
+                foreach (var entry in all.Skip(_seenRuntimeLogs)) Log("GAME " + entry);
+                _seenRuntimeLogs = all.Length;
+            }
         }
         catch (Exception ex) { Log("Refresh: " + ex.Message); }
     }
